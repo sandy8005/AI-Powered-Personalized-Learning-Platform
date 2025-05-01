@@ -1,0 +1,176 @@
+{% extends 'base.html' %}
+
+{% block title %}Dashboard - AI Learning Platform{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <!-- Messages section -->
+    {% if messages %}
+        <div class="messages">
+            {% for message in messages %}
+                <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                    {{ message }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+            {% endfor %}
+        </div>
+    {% endif %}
+
+    <!-- Header section -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1>My Course Plans</h1>
+        <a href="{% url 'create-course-plan-form' %}" class="btn btn-primary">+ New Plan</a>
+    </div>
+
+    <!-- Course plans list -->
+    <div class="row">
+        {% if course_plans %}
+            {% for course in course_plans %}
+                <div class="col-md-6 mb-4">
+                    <div class="card h-100 shadow-sm">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between align-items-start mb-2">
+                                <h2 class="card-title h4">{{ course.course_plan_name }}</h2>
+                                <span class="badge bg-secondary">{{ course.created_at|date:"M d, Y" }}</span>
+                            </div>
+                            <p class="card-text">{{ course.learning_goal }}</p>
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div class="text-muted">
+                                    <small>Course & Assignment{% if course.course_type == 'course_assignment_project' %} & Project{% endif %}</small>
+                                    <br>
+                                    <small>{{ course.number_of_weeks|default:"4" }} weeks</small>
+                                </div>
+                                <div class="d-flex">
+                                    <a href="{% url 'course-plan-detail' course.id %}" class="btn btn-outline-primary me-2">View</a>
+                                    <a href="{% url 'delete-course-plan' course.id %}" class="btn btn-outline-danger" 
+                                       onclick="return confirm('Are you sure you want to delete this course? This action cannot be undone.')">
+                                        Delete
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            {% endfor %}
+        {% else %}
+            <div class="col-12">
+                <div class="alert alert-info" role="alert">
+                    You don't have any course plans yet. Click the "New Plan" button to create your first course.
+                </div>
+            </div>
+        {% endif %}
+    </div>
+
+    <!-- AI Learning Assistant section -->
+    <div class="row mt-5">
+        <div class="col-lg-8 mx-auto">
+            <div class="card shadow">
+                <div class="card-header bg-primary text-white">
+                    <h2 class="h5 mb-0">AI Learning Assistant</h2>
+                </div>
+                <div class="card-body">
+                    <div class="chat-container" id="chatContainer">
+                        <div class="message ai-message">
+                            <div class="message-content">
+                                <span class="ai-badge">AI:</span> Hello! How can I help you today?
+                            </div>
+                        </div>
+                        
+                        {% for message in chat_history %}
+                            <div class="message {% if message.sender == 'You' %}user-message{% else %}ai-message{% endif %}">
+                                <div class="message-content">
+                                    {% if message.sender == 'You' %}
+                                        <span class="user-badge">You:</span>
+                                    {% else %}
+                                        <span class="ai-badge">AI:</span>
+                                    {% endif %}
+                                    {{ message.text }}
+                                </div>
+                            </div>
+                        {% endfor %}
+                    </div>
+                    
+                    <form id="chatForm" class="chat-form mt-3">
+                        <div class="input-group">
+                            <input type="text" id="userMessage" class="form-control" placeholder="Type your message..." required>
+                            <button type="submit" class="btn btn-primary">Send</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Chat functionality
+    document.addEventListener('DOMContentLoaded', function() {
+        const chatForm = document.getElementById('chatForm');
+        const userMessageInput = document.getElementById('userMessage');
+        const chatContainer = document.getElementById('chatContainer');
+        
+        chatForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const userMessage = userMessageInput.value.trim();
+            if (!userMessage) return;
+            
+            // Add user message to chat
+            addMessageToChat('You', userMessage);
+            
+            // Clear input
+            userMessageInput.value = '';
+            
+            // Send message to server
+            fetch('{% url "chatbot" %}', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                    'X-CSRFToken': '{{ csrf_token }}'
+                },
+                body: new URLSearchParams({
+                    'message': userMessage
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    // Add AI response to chat
+                    addMessageToChat('AI', data.message);
+                } else {
+                    // Handle error
+                    addMessageToChat('AI', 'Sorry, I encountered an error. Please try again.');
+                    console.error('Error:', data.message);
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                addMessageToChat('AI', 'Sorry, there was a network error. Please try again.');
+            });
+        });
+        
+        function addMessageToChat(sender, text) {
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${sender === 'You' ? 'user-message' : 'ai-message'}`;
+            
+            const messageContent = document.createElement('div');
+            messageContent.className = 'message-content';
+            
+            const badge = document.createElement('span');
+            badge.className = sender === 'You' ? 'user-badge' : 'ai-badge';
+            badge.textContent = `${sender}:`;
+            
+            messageContent.appendChild(badge);
+            messageContent.appendChild(document.createTextNode(' ' + text));
+            
+            messageDiv.appendChild(messageContent);
+            chatContainer.appendChild(messageDiv);
+            
+            // Scroll to bottom
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+        }
+    });
+</script>
+{% endblock %}

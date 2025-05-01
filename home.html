@@ -1,0 +1,20 @@
+{% extends 'base.html' %}
+
+{% block content %}
+  <div class="text-center py-8">
+    <h2 class="text-4xl font-semibold text-gray-800">Welcome to the AI Learning Platform</h2>
+    <p class="mt-4 text-lg text-gray-600">Join our platform to create personalized learning paths, manage courses, and track your progress.</p>
+    
+    <div class="mt-8">
+      <!-- Login Button: Navigates to the login page -->
+      <a href="{% url 'login' %}" class="px-6 py-3 text-white bg-blue-600 hover:bg-blue-700 rounded-full">
+        Login to your account
+      </a>
+    </div>
+
+    <p class="mt-4 text-gray-600">Don't have an account? 
+      <!-- Register Button: Navigates to the registration page -->
+      <a href="{% url 'register' %}" class="text-blue-600 hover:underline">Register here</a>
+    </p>
+  </div>
+{% endblock %}
